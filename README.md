@@ -126,7 +126,24 @@ This creates synthetic payload examples covering both OWASP-style attacks and ad
 - System Manipulation
 - Violence
 
-The runtime state is stored in the `artifacts/` folder so the project root stays clean.
+The runtime state is stored in the `artifacts/` folder so the project root stays clean. Each completed demo or one-shot prompt also writes a JSON artifact summarizing what ran and whether each expected outcome passed.
+
+Example artifact:
+
+```json
+{
+  "generated_at": "2026-08-24T16:21:32",
+  "total_runs": 2,
+  "passed": 2,
+  "failed": 0,
+  "runs": [
+    {"name": "Benign question", "expected": "allowed", "actual": "allowed", "passed": true},
+    {"name": "Prompt injection", "expected": "blocked", "actual": "blocked", "passed": true}
+  ]
+}
+```
+
+Artifacts are saved to `artifacts/run_artifact.json`.
 
 ---
 
