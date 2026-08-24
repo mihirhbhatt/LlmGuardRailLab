@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Guard Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><img class="brand-logo" src="/logo.jpeg" alt="AI Guard Lab logo"><div><strong>AI Guard Lab</strong><small>LOCAL SECURITY CONSOLE</small></div></div>
+      <div class="status"><span class="pulse"></span><span id="model">checking pipeline</span></div>
+    </header>
+    <section class="workspace">
+      <div class="chat-panel">
+        <div class="panel-heading"><div><span class="eyebrow">GUARDED CHAT</span><h1>Ask freely. See what gets through.</h1></div><button id="reset" class="quiet">Reset memory</button></div>
+        <div id="messages" class="messages"><div class="empty"><span class="empty-icon">01</span><p>Your conversation is protected by adaptive, input, and output guards.</p></div></div>
+        <form id="chat-form" class="composer"><textarea id="prompt" rows="2" placeholder="Message the local model..." autofocus></textarea><button class="send" type="submit">Send <span>↗</span></button></form>
+      </div>
+      <aside class="inspector"><div class="panel-heading"><div><span class="eyebrow">OBSERVABILITY</span><h2>Pipeline trace</h2></div></div><div id="trace" class="trace muted">Send a message to inspect each stage.</div><div class="stats"><div><span>LEARNED ATTACKS</span><strong id="entries">0</strong></div><div><span>PROACTIVE RE-HITS</span><strong id="hits">0</strong></div><div><span>MINED SIGNATURES</span><strong id="signatures">0</strong></div></div><button id="flag" class="flag" disabled>Flag last response</button></aside>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

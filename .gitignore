@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local virtual environment
+.venv/
+venv/
+
+# Generated logs / runtime artifacts
+*.log
+artifacts/
+
+# Local app state
+memory_vault.jsonl
+learned_signatures.json
+threat_db.json
+benign_prompts.jsonl

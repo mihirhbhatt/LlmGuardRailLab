@@ -1,0 +1,67 @@
+{
+  "hate_fairness": [
+    {
+      "pattern": "\\b(hate|hatred|slur|dehumanize|dehumanise|inferior|subhuman|segregat|exclud(e|ion))\\b.*\\b(race|religion|ethnicity|nationality|gender|immigrant|minority|tribe|sexual orientation)\\b",
+      "reason": "hate or discriminatory targeting",
+      "severity": "high"
+    },
+    {
+      "pattern": "\\b(white power|supremacist|racial purity|segregate.*people|should be excluded because of)\\b",
+      "reason": "explicit supremacist or exclusionary ideology",
+      "severity": "high"
+    }
+  ],
+  "self_harm": [
+    {
+      "pattern": "\\b(kill myself|kill yourself|end my life|end your life|hurt myself|hurt yourself|cut myself|cut yourself|self-harm|self harm|suicide|overdose|take pills to die|jump off)\\b",
+      "reason": "self-harm or suicide encouragement",
+      "severity": "high"
+    },
+    {
+      "pattern": "\\b(should die|life is not worth living|not worth living)\\b",
+      "reason": "suicide-normalizing language",
+      "severity": "high"
+    }
+  ],
+  "sexual_content": [
+    {
+      "pattern": "\\b(explicit sexual|graphic sexual|erotic|porn|nude|naked|sexual roleplay|sex scene|adult content)\\b",
+      "reason": "sexual content request",
+      "severity": "medium"
+    },
+    {
+      "pattern": "\\b(undress|seduce|sexualized|fetish)\\b",
+      "reason": "sexualized content generation",
+      "severity": "medium"
+    }
+  ],
+  "system_manipulation": [
+    {
+      "pattern": "\\b(ignore|disregard|override|bypass)\\s+(all\\s+|any\\s+)?(safety|policy|content|moderation|guardrails?|restrictions?|rules?)\\b",
+      "reason": "safety-policy override attempt",
+      "severity": "high"
+    },
+    {
+      "pattern": "\\b(reveal|show|print|output)\\s+(hidden|private|system|internal)\\s+(prompt|instructions?|policy|rules?)\\b",
+      "reason": "internal policy or hidden-instruction disclosure",
+      "severity": "high"
+    },
+    {
+      "pattern": "\\b(jailbreak|prompt injection|prompt smuggling|system prompt bypass)\\b",
+      "reason": "prompt or system manipulation",
+      "severity": "high"
+    }
+  ],
+  "violence": [
+    {
+      "pattern": "\\b(kill|murder|assassinate|stab|shoot|bomb|attack|strangle|blow up|execute someone)\\b",
+      "reason": "violent harm instruction",
+      "severity": "high"
+    },
+    {
+      "pattern": "\\b(violent threat|attack plan|hurt someone|cause physical harm)\\b",
+      "reason": "violence facilitation",
+      "severity": "high"
+    }
+  ]
+}
