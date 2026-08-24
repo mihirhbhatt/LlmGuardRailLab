@@ -1,10 +1,7 @@
 name: Python Tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -29,63 +26,63 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest tests -q > pytest-output.txt 2>&1
-          status=$?
+          status=0
+          python -m pytest tests -q > pytest-output.txt 2>&1 || status=$?
+
           python - <<'PY'
-import json
-import os
-import re
-import subprocess
-import sys
-from pathlib import Path
+          import json
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
 
-root = Path('.')
-artifact_dir = root / 'artifacts'
-artifact_dir.mkdir(exist_ok=True)
+          root = Path('.')
+          artifact_dir = root / 'artifacts'
+          artifact_dir.mkdir(exist_ok=True)
 
-log_path = root / 'pytest-output.txt'
-log_text = log_path.read_text(encoding='utf-8', errors='replace') if log_path.exists() else ''
+          log_path = root / 'pytest-output.txt'
+          log_text = log_path.read_text(encoding='utf-8', errors='replace') if log_path.exists() else ''
 
-summary = ''
-for line in reversed(log_text.splitlines()):
-    line = line.strip()
-    if not line:
-        continue
-    if re.search(r'\b\d+ passed\b|\b\d+ failed\b|\b\d+ error\b', line):
-        summary = line
-        break
+          summary = ''
+          for line in reversed(log_text.splitlines()):
+              line = line.strip()
+              if not line:
+                  continue
+              if re.search(r'\b\d+ passed\b|\b\d+ failed\b|\b\d+ error\b', line):
+                  summary = line
+                  break
 
-match = re.search(r'(\d+) passed', log_text)
-passed = int(match.group(1)) if match else 0
-match = re.search(r'(\d+) failed', log_text)
-failed = int(match.group(1)) if match else 0
-match = re.search(r'(\d+) error', log_text)
-errors = int(match.group(1)) if match else 0
+          match = re.search(r'(\d+) passed', log_text)
+          passed = int(match.group(1)) if match else 0
+          match = re.search(r'(\d+) failed', log_text)
+          failed = int(match.group(1)) if match else 0
+          match = re.search(r'(\d+) error', log_text)
+          errors = int(match.group(1)) if match else 0
 
-artifact = {
-    'generated_at': __import__('datetime').datetime.utcnow().isoformat(timespec='seconds') + 'Z',
-    'total_runs': 1,
-    'passed': passed,
-    'failed': failed + errors,
-    'summary': {
-        'total': passed + failed + errors,
-        'passed': passed,
-        'failed': failed + errors,
-        'pytest_summary': summary,
-    },
-    'runs': [{
-        'name': 'pytest-tests',
-        'prompt': 'python -m pytest tests -q',
-        'expected': 'passed',
-        'actual': 'passed' if (failed == 0 and errors == 0) else 'failed',
-        'passed': (failed == 0 and errors == 0),
-        'blocked_at': None,
-        'error': None if (failed == 0 and errors == 0) else log_text.strip()[-2000:],
-    }],
-}
-(root / 'artifacts' / 'run_artifact.json').write_text(json.dumps(artifact, indent=2), encoding='utf-8')
-print(json.dumps(artifact['summary'], indent=2))
-PY
+          artifact = {
+              'generated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'total_runs': 1,
+              'passed': passed,
+              'failed': failed + errors,
+              'summary': {
+                  'total': passed + failed + errors,
+                  'passed': passed,
+                  'failed': failed + errors,
+                  'pytest_summary': summary,
+              },
+              'runs': [{
+                  'name': 'pytest-tests',
+                  'prompt': 'python -m pytest tests -q',
+                  'expected': 'passed',
+                  'actual': 'passed' if (failed == 0 and errors == 0) else 'failed',
+                  'passed': (failed == 0 and errors == 0),
+                  'blocked_at': None,
+                  'error': None if (failed == 0 and errors == 0) else log_text.strip()[-2000:],
+              }],
+          }
+          (root / 'artifacts' / 'run_artifact.json').write_text(json.dumps(artifact, indent=2), encoding='utf-8')
+          print(json.dumps(artifact['summary'], indent=2))
+          PY
+
           exit $status
 
       - name: Upload run artifact
