@@ -120,3 +120,79 @@ class AuditLogger:
                 by_stage[r["blocked_at"]] = by_stage.get(r["blocked_at"], 0) + 1
         return {"total": len(pipe), "by_decision": by_decision,
                 "blocked_by_stage": by_stage, "path": str(self.path)}
+
+    def _actual_result(self, record: dict) -> str:
+        if record.get("error"):
+            return "error"
+        if record.get("blocked_at"):
+            return "blocked"
+        return "allowed"
+
+    def build_run_artifact(self, runs: list[dict] | None = None,
+                          path: str | Path | None = None) -> dict:
+        """Build a run artifact from pipeline records or explicit run rows.
+
+        Each run row can include: name, prompt, expected, decision, blocked_at, and
+        error. If no explicit expected outcome is given, pass/fail is left null.
+        """
+        if runs is None:
+            rows = []
+            for rec in self.tail(100000):
+                if rec.get("event") == "pipeline":
+                    rows.append({
+                        "name": rec.get("prompt", "")[:80],
+                        "prompt": rec.get("prompt", ""),
+                        "blocked_at": rec.get("blocked_at"),
+                        "decision": rec.get("decision", self._actual_result(rec)),
+                        "error": rec.get("error"),
+                    })
+        else:
+            rows = list(runs)
+
+        artifact_runs = []
+        passed = 0
+        failed = 0
+        for row in rows:
+            actual = row.get("decision") or self._actual_result(row)
+            expected = row.get("expected")
+            if expected is not None:
+                outcome = actual == expected
+                if outcome:
+                    passed += 1
+                else:
+                    failed += 1
+            else:
+                outcome = None
+            artifact_runs.append({
+                "name": row.get("name") or row.get("scenario") or "run",
+                "prompt": row.get("prompt"),
+                "expected": expected,
+                "actual": actual,
+                "passed": outcome,
+                "blocked_at": row.get("blocked_at"),
+                "error": row.get("error"),
+            })
+
+        artifact = {
+            "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            "total_runs": len(artifact_runs),
+            "passed": passed,
+            "failed": failed,
+            "summary": {
+                "total": len(artifact_runs),
+                "passed": passed,
+                "failed": failed,
+            },
+            "runs": artifact_runs,
+        }
+
+        if path is not None:
+            target = Path(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(artifact, ensure_ascii=False, indent=2), encoding="utf-8")
+        return artifact
+
+    def write_run_artifact(self, runs: list[dict] | None = None,
+                          path: str | Path | None = None) -> dict:
+        target = Path(path or self.path.with_name("run_artifact.json"))
+        return self.build_run_artifact(runs=runs, path=target)
