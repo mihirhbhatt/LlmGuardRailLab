@@ -9,16 +9,20 @@ This project is designed to help you:
 - run experiments without cloud dependencies
 
 It mirrors the idea behind a real guardrail stack, but keeps it easy to run on your own machine.
+Each guard can enforce one of four actions: allow, block, sanitize/redact, or escalate for human approval.
 
 ## What this lab does
 
 The app runs a simple pipeline:
 
-User prompt -> input guard -> model -> output guard -> user response
+User prompt -> adaptive guard -> input guard -> context guard -> model/tool orchestration -> action guard -> output guard -> user response
 
 The guard layer checks for:
 - encoded or hidden prompt payloads
 - prompt-injection and override attempts
+- PII/secret patterns in prompts and responses
+- untrusted retrieval context sources and instruction stripping
+- tool-call policy enforcement (allowlist + schema checks + escalation for risky actions)
 - unsafe links, malicious commands, and tool leakage in output
 - hate/fairness, self-harm, sexual, violence, and system-manipulation content
 - adaptive similarity-based blocking using learned attack patterns
@@ -156,6 +160,17 @@ Artifacts are saved to `artifacts/run_artifact.json`.
 - hidden system prompt or developer prompt exfiltration attempts
 - ML moderation via Llama Guard 3 when enabled
 - content safety hits for hate/self-harm/sexual/violence/system manipulation
+- PII and credential-secret detection in user prompts
+
+### Context guard (`guards/context_guard.py`)
+- source allowlist checks for retrieved context
+- strips active instruction-injection text from retrieved snippets
+- blocks untrusted context sources before inference
+
+### Action guard (`guards/action_guard.py`)
+- enforces tool allowlist
+- validates tool-call argument shape and bounds
+- escalates high-risk/unknown destructive tool requests for human approval
 
 ### Output guard (`guards/output_guard.py`)
 - unsafe URLs and sketchy domains
@@ -164,6 +179,7 @@ Artifacts are saved to `artifacts/run_artifact.json`.
 - leaked tool schemas or internal system prompt text
 - ML moderation via Llama Guard 3 when enabled
 - content safety hits in generated responses
+- secret/PII leakage redaction path (sanitize + allow)
 
 ### Adaptive guard
 - learns from confirmed attacks
@@ -216,9 +232,11 @@ ollama-ai-guard-lab/
 ├── audit.py                        # Audit log serialization
 ├── guards/
 │   ├── adaptive.py                 # Learned threat + signature logic
+│   ├── action_guard.py             # Tool execution policy guard
 │   ├── base.py                    # GuardResult / Verdict definitions
 │   ├── content_safety_policy.py   # Loads the JSON safety policy
 │   ├── content_safety_policy.json # Human-editable safety taxonomy
+│   ├── context_guard.py            # Retrieval context trust + stripping
 │   ├── input_guard.py             # Input safety checks
 │   ├── llama_guard.py             # Llama Guard 3 interface
 │   ├── output_guard.py            # Output safety checks

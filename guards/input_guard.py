@@ -67,6 +67,12 @@ _INJECTION_PATTERNS = [
 _B64_RE = re.compile(r"\b[A-Za-z0-9+/]{16,}={0,2}\b")
 _HEX_RE = re.compile(r"\b(?:[0-9a-fA-F]{2}){10,}\b")
 _MOSTLY_PRINTABLE = re.compile(r"^[\x20-\x7e\s]+$")
+_PII_SECRETS = [
+    (r"\b\d{3}-\d{2}-\d{4}\b", "possible SSN in prompt"),
+    (r"\b(?:\d[ -]*?){13,19}\b", "possible payment card number in prompt"),
+    (r"\bsk-[A-Za-z0-9]{20,}\b", "possible API key in prompt"),
+    (r"\bAKIA[0-9A-Z]{16}\b", "possible AWS access key in prompt"),
+]
 
 
 def _looks_like_text(s: str) -> bool:
@@ -163,7 +169,19 @@ class InputGuard:
                 severity=hit["severity"],
             ))
 
-        # 5) Optional ML layer (Llama Guard 3 via Ollama)
+        # 5) PII/secret detection
+        for pattern, why in _PII_SECRETS:
+            m = re.search(pattern, prompt, re.IGNORECASE)
+            if m:
+                findings.append(Finding(
+                    category="pii_or_secret",
+                    rule=pattern[:30],
+                    detail=why,
+                    evidence=m.group(0)[:80],
+                    severity="high",
+                ))
+
+        # 6) Optional ML layer (Llama Guard 3 via Ollama)
         ml_verdict = None
         if self.use_ml:
             safe, label = llama_guard.classify(prompt, role="user")

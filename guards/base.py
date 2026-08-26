@@ -9,6 +9,8 @@ from enum import Enum
 class Verdict(str, Enum):
     ALLOW = "ALLOW"
     BLOCK = "BLOCK"
+    SANITIZE = "SANITIZE"
+    ESCALATE = "ESCALATE"
 
 
 @dataclass
@@ -28,10 +30,11 @@ class GuardResult:
     findings: list[Finding] = field(default_factory=list)
     latency_ms: float = 0.0
     ml_verdict: str | None = None         # raw Llama Guard output, if used
+    sanitized_text: str | None = None     # rewritten safe output for SANITIZE verdicts
 
     @property
     def blocked(self) -> bool:
-        return self.verdict == Verdict.BLOCK
+        return self.verdict in (Verdict.BLOCK, Verdict.ESCALATE)
 
     def summary(self) -> str:
         if not self.findings:
