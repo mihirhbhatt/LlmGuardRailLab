@@ -25,6 +25,7 @@ SYSTEM_PROMPT = (
 
 MAX_TOOL_ITERATIONS = 4      # max agent-loop rounds
 REQUEST_TIMEOUT = 300        # seconds — local inference can be slow on CPU
+MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "512"))
 
 # ── Guard tuning ──────────────────────────────────────────────────────────
 # Minimum decoded-text length (chars) before an encoded blob is treated as

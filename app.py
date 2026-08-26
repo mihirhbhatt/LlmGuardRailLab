@@ -72,13 +72,17 @@ def print_result(res: PipelineResult, verbose: bool = True):
             _print_guard(res.adaptive_guard, "(0)")
         if res.blocked_at != "adaptive" and res.input_guard:
             _print_guard(res.input_guard, "(1)")
-        if res.blocked_at not in ("adaptive", "input") and (res.inference_ms or res.error):
+        if res.blocked_at not in ("adaptive", "input") and res.context_guard:
+            _print_guard(res.context_guard, "(1.5)")
+        if res.blocked_at not in ("adaptive", "input", "context") and (res.inference_ms or res.error):
             secs = res.inference_ms / 1000
             status = f"{R}ERROR{RESET}" if res.error else f"{G}OK{RESET}"
             tools = f", {len(res.tool_trace)} tool call(s)" if res.tool_trace else ""
             print(f"  (2) Orchestrator+Ollama    {status} {DIM}({secs:.1f} s{tools}){RESET}")
             for t in res.tool_trace:
                 print(f"       {C}*{RESET} {t}")
+        if res.action_guard:
+            _print_guard(res.action_guard, "(2.5)")
         if res.output_guard:
             _print_guard(res.output_guard, "(3)")
         if res.blocked_at == "output" and res.agent_text:
@@ -88,8 +92,12 @@ def print_result(res: PipelineResult, verbose: bool = True):
 
     tag = {"adaptive": f"{M}{B}BLOCKED PROACTIVELY @ ADAPTIVE GUARD (0){RESET}",
            "input": f"{R}{B}BLOCKED @ INPUT GUARD (1){RESET}",
+           "context": f"{R}{B}BLOCKED @ CONTEXT GUARD (1.5){RESET}",
+           "action": f"{R}{B}BLOCKED @ ACTION GUARD (2.5){RESET}",
            "output": f"{R}{B}BLOCKED @ OUTPUT GUARD (3){RESET}",
            None: f"{G}{B}ALLOWED{RESET}"}[res.blocked_at]
+    if res.sanitized and res.blocked_at is None:
+        tag = f"{Y}{B}SANITIZED + ALLOWED{RESET}"
     print(f"\n  {tag}")
     print(f"  {res.final_text}\n")
 

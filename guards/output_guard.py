@@ -60,6 +60,13 @@ _TOOL_LEAK = [
     (r"my\s+system\s+prompt\s+(is|says|reads)\s*[:\"']", "system-prompt disclosure"),
 ]
 
+_SECRET_LEAKS = [
+    (re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"), "[REDACTED_API_KEY]", "possible API key leak"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "[REDACTED_AWS_KEY]", "possible AWS access key leak"),
+    (re.compile(r"\b(?:\d[ -]*?){13,19}\b"), "[REDACTED_CARD]", "possible card number leak"),
+]
+
+
 def _check_url(url: str) -> str | None:
     """Return a reason string if the URL looks unsafe, else None."""
     m = re.match(r"https?://([^/:\s]+)", url, re.IGNORECASE)
@@ -94,6 +101,7 @@ class OutputGuard:
     def check(self, response: str) -> GuardResult:
         t0 = time.perf_counter()
         findings: list[Finding] = []
+        sanitized = response
 
         # 1) Unsafe links
         for url in _URL_RE.findall(response):
@@ -143,11 +151,35 @@ class OutputGuard:
                     detail=f"Llama Guard 3 flagged response: {label}",
                 ))
 
-        blocked = bool(findings)
+        # 6) Secret/PII leak scan with sanitize path
+        for pattern, replacement, why in _SECRET_LEAKS:
+            for match in pattern.finditer(sanitized):
+                findings.append(Finding(
+                    category="secret_leak",
+                    rule=pattern.pattern[:30],
+                    detail=why,
+                    evidence=match.group(0)[:80],
+                    severity="medium",
+                ))
+            sanitized = pattern.sub(replacement, sanitized)
+
+        has_hard_block = any(f.category != "secret_leak" for f in findings)
+        has_sanitize = any(f.category == "secret_leak" for f in findings)
+        if has_hard_block:
+            verdict = Verdict.BLOCK
+            sanitized_text = None
+        elif has_sanitize:
+            verdict = Verdict.SANITIZE
+            sanitized_text = sanitized
+        else:
+            verdict = Verdict.ALLOW
+            sanitized_text = None
+
         return GuardResult(
             guard_name=self.name,
-            verdict=Verdict.BLOCK if blocked else Verdict.ALLOW,
+            verdict=verdict,
             findings=findings,
             latency_ms=(time.perf_counter() - t0) * 1000,
             ml_verdict=ml_verdict,
+            sanitized_text=sanitized_text,
         )

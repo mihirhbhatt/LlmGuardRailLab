@@ -14,6 +14,7 @@ import requests
 
 import config
 from .tools import REGISTRY, TOOLS
+from guards import ActionGuard, GuardResult
 
 
 @dataclass
@@ -23,6 +24,7 @@ class AgentResult:
     tool_trace: list[str] = field(default_factory=list)
     model: str = config.INFERENCE_MODEL
     error: str | None = None
+    action_guard: GuardResult | None = None
 
 
 class Orchestrator:
@@ -35,6 +37,7 @@ class Orchestrator:
             "If asked which model is running, answer with that model name."
         )
         self.enable_tools = enable_tools
+        self.action_guard = ActionGuard()
 
     # ── Ollama call ───────────────────────────────────────────────────
     def _chat(self, messages: list[dict], with_tools: bool) -> dict:
@@ -42,7 +45,7 @@ class Orchestrator:
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": 0.3},
+            "options": {"temperature": 0.3, "num_predict": config.MAX_OUTPUT_TOKENS},
         }
         if with_tools:
             payload["tools"] = TOOLS
@@ -52,9 +55,19 @@ class Orchestrator:
         return resp.json()["message"]
 
     # ── Agent loop ────────────────────────────────────────────────────
-    def run(self, user_prompt: str, history: list[dict] | None = None) -> AgentResult:
+    def run(
+        self,
+        user_prompt: str,
+        history: list[dict] | None = None,
+        context_snippets: list[str] | None = None,
+    ) -> AgentResult:
         t0 = time.perf_counter()
         messages = [{"role": "system", "content": self.system_prompt}]
+        if context_snippets:
+            messages.append({
+                "role": "system",
+                "content": "Trusted context for this turn:\n" + "\n---\n".join(context_snippets[:5]),
+            })
         if history:
             messages += history
         messages.append({"role": "user", "content": user_prompt})
@@ -83,6 +96,15 @@ class Orchestrator:
                             args = json.loads(args)
                         except json.JSONDecodeError:
                             args = {}
+                    action_check = self.action_guard.check_tool_call(name, args)
+                    if action_check.blocked:
+                        return AgentResult(
+                            text="",
+                            latency_ms=(time.perf_counter() - t0) * 1000,
+                            tool_trace=trace,
+                            model=self.model,
+                            action_guard=action_check,
+                        )
                     impl = REGISTRY.get(name)
                     result = impl(**args) if impl else f"error: unknown tool '{name}'"
                     trace.append(f"{name}({json.dumps(args)}) → {result}")

@@ -32,6 +32,7 @@ def guard_to_dict(g) -> dict | None:
         "verdict": g.verdict.value,
         "latency_ms": round(g.latency_ms, 2),
         "ml_verdict": g.ml_verdict,
+        "sanitized_text": g.sanitized_text[:200] if g.sanitized_text else None,
         "findings": [
             {"category": f.category, "detail": f.detail,
              "severity": f.severity, "evidence": f.evidence}
@@ -46,6 +47,8 @@ def result_to_record(res, event: str = "pipeline") -> dict:
         decision = "error"
     elif res.blocked_at:
         decision = "blocked"
+    elif getattr(res, "sanitized", False):
+        decision = "sanitized"
     else:
         decision = "allowed"
     return {
@@ -62,6 +65,8 @@ def result_to_record(res, event: str = "pipeline") -> dict:
         "stages": {
             "adaptive": guard_to_dict(res.adaptive_guard),
             "input": guard_to_dict(res.input_guard),
+            "context": guard_to_dict(getattr(res, "context_guard", None)),
+            "action": guard_to_dict(getattr(res, "action_guard", None)),
             "output": guard_to_dict(res.output_guard),
         },
         "guard_ms": round(res.total_guard_ms, 2),
