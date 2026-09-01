@@ -123,6 +123,40 @@ Generate more attack payloads:
 python -m payloads.owasp_payloads
 ```
 
+Generate the deterministic OWASP benchmark matrix:
+
+```bash
+python -m payloads.owasp_llm_benchmark
+```
+
+This writes `data/owasp_llm_1000_dataset.json`: 1,000 structured test cases spanning all 10 OWASP categories, five safety-risk categories, five adversarial framings, CVSS metadata, and response-judge criteria.
+
+Run every benchmark case through the full pipeline (rules only, isolated from normal audit and adaptive-memory files):
+
+```bash
+python benchmark_guardrails.py
+```
+
+The command writes `artifacts/benchmarks/owasp_llm_1000/report.json`. Every `runs` entry records the exact `user_input` tested, OWASP category, risk category, attack framing, CVSS data, judge criterion, expected result, actual result, enforcement stage, findings, and error. The default `independent` mode resets adaptive learning before each case, so it measures static-rule coverage. To measure the adaptive guard during a sustained attack campaign, run:
+
+```bash
+python benchmark_guardrails.py --mode sequential
+```
+
+To include Ollama's Llama Guard classification, run `python benchmark_guardrails.py --use-ml-guard`. Start with an inexpensive smoke test using `python benchmark_guardrails.py --limit 10`.
+
+GitHub Actions runs the full 1,000-case matrix with `--execution-stage input`, which exercises the input guard without requiring a local Ollama service or model downloads on GitHub-hosted runners. Download the `owasp-llm-1000-benchmark` workflow artifact to inspect its complete `report.json`. Use a self-hosted runner with Ollama for `--execution-stage full` CI validation.
+
+Run the smaller mixed-outcome regression suite to validate both security detection and benign-request handling:
+
+```bash
+python benchmark_guardrails.py --suite validation --execution-stage input \
+  --validation-variants 5 \
+  --output-dir artifacts/benchmarks/guardrail_validation
+```
+
+It includes four expected allows and seven expected blocks. Use `--validation-variants 1` through `--validation-variants 5` to expand each seed with deterministic prompt-context variants. Its report shows the seed case, variant index, expected and actual outcome for every run, and it is included in the GitHub Actions benchmark artifact.
+
 This creates synthetic payload examples covering both OWASP-style attacks and additional categories such as:
 - Hate & Fairness
 - Self Harm

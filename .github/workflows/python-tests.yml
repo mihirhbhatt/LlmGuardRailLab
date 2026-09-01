@@ -92,3 +92,25 @@ jobs:
           name: guardlab-run-artifact
           path: artifacts/run_artifact.json
           if-no-files-found: error
+
+      - name: Run OWASP input-guard benchmark
+        run: |
+          python benchmark_guardrails.py \
+            --execution-stage input \
+            --output-dir artifacts/benchmarks/owasp_llm_1000_ci
+
+      - name: Run expected-outcome guardrail validation
+        run: |
+          python benchmark_guardrails.py \
+            --suite validation \
+            --execution-stage input \
+            --validation-variants 5 \
+            --output-dir artifacts/benchmarks/guardrail_validation_ci
+
+      - name: Upload OWASP benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-llm-1000-benchmark
+          path: artifacts/benchmarks/
+          if-no-files-found: error
