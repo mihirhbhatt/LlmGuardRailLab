@@ -6,7 +6,7 @@ import os
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 
 # The inference model (stand-in for Amazon Bedrock / Claude Haiku 4.5)
-INFERENCE_MODEL = os.environ.get("INFERENCE_MODEL", "llama3.1")
+INFERENCE_MODEL = os.environ.get("INFERENCE_MODEL", "llama3.1:8b")
 
 # The moderation model (stand-in for Trend AI Guard's ML classifier).
 # Pull with:  ollama pull llama-guard3:1b   (or llama-guard3:8b)
